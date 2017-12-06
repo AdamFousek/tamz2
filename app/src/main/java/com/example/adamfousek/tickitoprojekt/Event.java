@@ -1,0 +1,47 @@
+package com.example.adamfousek.tickitoprojekt;
+
+import java.io.Serializable;
+
+/**
+ * Created by adamfousek on 28.11.17.
+ */
+
+public class Event implements Serializable {
+
+    private int id;
+    private String name;
+    private int used_tickets;
+    private int total_tickets;
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getUsed_tickets() {
+        return used_tickets;
+    }
+
+    public void setUsed_tickets(int used_tickets) {
+        this.used_tickets = used_tickets;
+    }
+
+    public int getTotal_tickets() {
+        return total_tickets;
+    }
+
+    public void setTotal_tickets(int total_tickets) {
+        this.total_tickets = total_tickets;
+    }
+}
