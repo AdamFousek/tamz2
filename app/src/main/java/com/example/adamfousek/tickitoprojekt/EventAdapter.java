@@ -12,6 +12,7 @@ import java.util.List;
 
 /**
  * Created by adamfousek on 28.11.17.
+ * Třída pro seznam eventů
  */
 
 public class EventAdapter extends ArrayAdapter<Event> {

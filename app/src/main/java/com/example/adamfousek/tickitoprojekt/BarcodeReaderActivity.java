@@ -1,28 +1,11 @@
 package com.example.adamfousek.tickitoprojekt;
 
-import android.Manifest;
 import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.hardware.Camera;
-import android.hardware.camera2.CameraDevice;
-import android.hardware.camera2.CameraManager;
-import android.net.Uri;
-import android.os.Build;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.LinearLayout;
-import android.widget.Toast;
 
 import com.google.zxing.Result;
 
@@ -32,14 +15,13 @@ import static android.Manifest.permission_group.CAMERA;
 
 public class BarcodeReaderActivity extends AppCompatActivity implements ZXingScannerView.ResultHandler {
 
+    // ScannerView - pracuje s kamerou
     private ZXingScannerView scannerView;
-
-    private CameraManager cameraManager;
-    private CameraDevice cameraDevice;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Nastavení layoutu pro kameru
         setContentView(R.layout.activity_barcode_reader);
         scannerView = new ZXingScannerView(this);
         setContentView(scannerView);
@@ -54,32 +36,34 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
         scannerView.stopCamera();
     }
 
+    // @TODO Naskenovaný kód se uloží lokálně a odešle se na api a zjistí jestli již byl použitý
     @Override
     public void handleResult(Result result) {
         final String myResult = result.getText();
 
+        // Vypsání kódu a jestli byl použitý nebo ne
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Scan Result");
+        builder.setTitle("OK/Not OK");
         builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 scannerView.resumeCameraPreview(BarcodeReaderActivity.this);
             }
         });
-        builder.setNeutralButton("Visit", new DialogInterface.OnClickListener() {
+        builder.setNeutralButton("Again", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(myResult));
-                startActivity(browserIntent);
+                scannerView.resumeCameraPreview(BarcodeReaderActivity.this);
             }
         });
-        builder.setMessage(result.getText());
+        builder.setMessage(myResult);
         AlertDialog alert1 = builder.create();
         alert1.show();
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu){
+        // Menu pro rozsvicení světla a zadání kódu ručně
         getMenuInflater().inflate(R.menu.barcode_menu, menu);
         return true;
     }
@@ -89,11 +73,13 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
         int id = item.getItemId();
 
         if(id == R.id.flashlight){
-            boolean flash = scannerView.getFlash();
+            // Rozsvícení světla
+            // @TODO Je třeba zapracovat na fixu kdy to nefunguje hezky
             scannerView.setFlash(!scannerView.getFlash());
             return true;
         }
         if(id == R.id.manulaScan){
+            // Zobrazí se Activita na zadání kódu ručně
             /*Intent intent = new Intent(this, Settings.class);
             startActivityForResult(intent, 333);
             //Toast.makeText(getApplicationContext(), "Setting", Toast.LENGTH_SHORT).show();*/

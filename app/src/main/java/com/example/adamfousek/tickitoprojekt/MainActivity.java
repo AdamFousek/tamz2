@@ -1,11 +1,9 @@
 package com.example.adamfousek.tickitoprojekt;
 
+import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
-import android.graphics.PorterDuff;
-import android.net.Uri;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
-import android.support.v4.content.ContextCompat;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -18,39 +16,58 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-
-import java.io.IOException;
-import java.util.ArrayList;
-
-
 import retrofit2.*;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 
 public class MainActivity extends AppCompatActivity {
 
-    Button buttonLogin;
-    EditText loginText;
-    EditText passwordText;
-    TextView wrong;
+    // Komponenty layoutu
+    private Button buttonLogin;
+    private EditText loginText;
+    private EditText passwordText;
+    private TextView wrong;
 
+    // Informace o uživateli
+    private User user = new User();
+
+    // SharedPreferences uložení dat o uživateli
+    private SharedPreferences mySharedPref;
+    private SharedPreferences.Editor mySharedEditor;
+
+    // Retrofit cool knihovna na api
     private final Retrofit.Builder builder = new Retrofit.Builder()
             .baseUrl("https://www.tickito.cz/")
             .addConverterFactory(GsonConverterFactory.create());
-
     private final Retrofit retrofit = builder.build();
 
-    private User user = new User();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //Toast.makeText(getApplicationContext(), "toast", Toast.LENGTH_SHORT).show();
+        // SharedPreference - po prvním přihlášení se nastaví cache na 1 den
+        mySharedPref = getSharedPreferences("myPref", Context.MODE_PRIVATE);
+        String name = mySharedPref.getString("name", "");
+        String password = mySharedPref.getString("password", "");
+        long timestamp = mySharedPref.getLong("timestamp", 1);
+        long currentTimestamp = System.currentTimeMillis() / 1000L;
+        try {
+            password = AESCrypt.decrypt(password);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        if(timestamp > currentTimestamp){
+            if(!name.isEmpty() && !password.isEmpty()) {
+                UserLoginTask mAuthTask = new UserLoginTask(name, password);
+                mAuthTask.execute((Void) null);
+            }
+        }
 
+        // Zjištění componentů + jejích eventy
         wrong = (TextView) findViewById(R.id.wrongLogin);
-
         loginText = (EditText) findViewById(R.id.editTextLogin);
         loginText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
@@ -60,7 +77,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-
         passwordText = (EditText) findViewById(R.id.editTextPassword);
         passwordText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
@@ -71,6 +87,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // Zjištění přihlašovácího buttonu, jeho touchlistener
         buttonLogin = (Button) findViewById(R.id.buttonLogin);
         buttonLogin.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -78,12 +95,14 @@ public class MainActivity extends AppCompatActivity {
 
                 switch(motionEvent.getAction()){
                     case MotionEvent.ACTION_DOWN:{
+                        // Effekt tlačítka :)
                         buttonLogin.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.button_selector_pressed, null));
                         wrong.setText("");
                         break;
                     }
                     case MotionEvent.ACTION_UP: {
                         buttonLogin.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.button_selector, null));
+                        // Kontrola jestli uživatel vyplnil text pokud ano, udělá se AsyncTask
                         if(loginText.getText().toString().isEmpty() || passwordText.getText().toString().isEmpty()){
                             wrong.setText("Vyplňte prosím pole");
                         }else{
@@ -99,11 +118,18 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Schování klávesnice když kliknu mimo text componenty
+     * @param view
+     */
     public void hideKeyboard(View view) {
         InputMethodManager inputMethodManager =(InputMethodManager)getSystemService(MainActivity.INPUT_METHOD_SERVICE);
         inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
     }
 
+    /**
+     * Classa na AsyncTask - kontrola údajů api
+     */
     public class UserLoginTask extends AsyncTask<Void, Void, Boolean> {
 
         private final String name;
@@ -115,6 +141,7 @@ public class MainActivity extends AppCompatActivity {
             this.password = password;
         }
 
+        // Získání údajů z API
         @Override
         protected Boolean doInBackground(Void... voids) {
             UserClient userClient = retrofit.create(UserClient.class);
@@ -126,11 +153,18 @@ public class MainActivity extends AppCompatActivity {
 
             try {
                 Response<User> response = call.execute();
-                user = response.body();
-                if(!user.getEvents().isEmpty()){
+                if(response.isSuccessful()){
+                    user = response.body();
+                    user.setName(name);
+                    // Ukládání údajů do sharedPreferences - na 1 den
+                    mySharedEditor = mySharedPref.edit();
+                    mySharedEditor.putString("name", name);
+                    mySharedEditor.putString("password", AESCrypt.encrypt(password));
+                    mySharedEditor.putLong("timestamp", (System.currentTimeMillis() / 1000L)*24*60*60);
+                    mySharedEditor.apply();
                     logedIn = true;
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
             return logedIn;
@@ -138,25 +172,23 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(final Boolean success){
-            //mAuthTask = null;
 
             if(success){
-                Toast.makeText(getApplicationContext(), "Success", Toast.LENGTH_SHORT).show();
+                // Uživateli zobrazí Úspěch přepne do nové aktivity s User objektem a aktuální aktivitu ukončí
+                Toast.makeText(getApplicationContext(), "Přihlášení úspěšné", Toast.LENGTH_SHORT).show();
                 Intent intent = new Intent(MainActivity.this, ListOfEventsActivity.class);
                 intent.putExtra("User", user);
                 startActivity(intent);
-                //Correct data
+                finish();
             }else{
-                //Toast.makeText(getApplicationContext(), "NO Success", Toast.LENGTH_SHORT).show();
+                // Špatné jméno nebo heslo oznámí uživateli v TextView
                 wrong.setText("Špatné jméno nebo heslo");
-                //Incorrect data
             }
 
         }
 
         @Override
         protected void  onCancelled() {
-            //mAuthTask = null;
         }
 
     }

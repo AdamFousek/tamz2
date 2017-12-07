@@ -4,6 +4,7 @@ import java.util.Date;
 
 /**
  * Created by adamfousek on 28.11.17.
+ * Třída pro daný kód
  */
 
 public class Code {

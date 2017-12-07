@@ -4,6 +4,7 @@ import java.io.Serializable;
 
 /**
  * Created by adamfousek on 28.11.17.
+ * Třída pro údálosti (akce)
  */
 
 public class Event implements Serializable {

@@ -8,6 +8,7 @@ import java.util.ArrayList;
 
 /**
  * Created by adamfousek on 28.11.17.
+ * Třída pro uživatele
  */
 
 public class User implements Serializable {
@@ -16,11 +17,21 @@ public class User implements Serializable {
     @Expose
     private ArrayList<Event> events = new ArrayList<Event>();
 
+    private String name;
+
     public ArrayList<Event> getEvents() {
         return events;
     }
 
     public void setEvents(ArrayList<Event> events) {
         this.events = events;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 }
