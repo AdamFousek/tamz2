@@ -25,7 +25,6 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
         setContentView(R.layout.activity_barcode_reader);
         scannerView = new ZXingScannerView(this);
         setContentView(scannerView);
-
         scannerView.setResultHandler(this);
         scannerView.startCamera();
     }
@@ -71,11 +70,10 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
     @Override
     public boolean onOptionsItemSelected(MenuItem item){
         int id = item.getItemId();
-
         if(id == R.id.flashlight){
             // Rozsvícení světla
-            // @TODO Je třeba zapracovat na fixu kdy to nefunguje hezky
-            scannerView.setFlash(!scannerView.getFlash());
+            // @TODO Je třeba zapracovat na fixu kdy to nefunguje hezky - když se autofocusuje nejde zapnout světlo
+            scannerView.toggleFlash();
             return true;
         }
         if(id == R.id.manulaScan){

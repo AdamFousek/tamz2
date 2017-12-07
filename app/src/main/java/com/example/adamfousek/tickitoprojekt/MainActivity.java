@@ -3,7 +3,10 @@ package com.example.adamfousek.tickitoprojekt;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
+import android.os.Handler;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -41,6 +44,9 @@ public class MainActivity extends AppCompatActivity {
             .addConverterFactory(GsonConverterFactory.create());
     private final Retrofit retrofit = builder.build();
 
+    Handler mHandler = new Handler();
+    boolean isRunning = true;
+
 
 
     @Override
@@ -65,9 +71,33 @@ public class MainActivity extends AppCompatActivity {
                 mAuthTask.execute((Void) null);
             }
         }
-
         // Zjištění componentů + jejích eventy
         wrong = (TextView) findViewById(R.id.wrongLogin);
+
+        // Kontrola připojení
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // TODO Auto-generated method stub
+                while (isRunning) {
+                    try {
+                        Thread.sleep(5000);
+                        mHandler.post(new Runnable() {
+
+                            @Override
+                            public void run() {
+                                // TODO Auto-generated method stub
+                                // Write your code here to update the UI.
+                                displayData();
+                            }
+                        });
+                    } catch (Exception e) {
+                        // TODO: handle exception
+                    }
+                }
+            }
+        }).start();
+
         loginText = (EditText) findViewById(R.id.editTextLogin);
         loginText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
@@ -125,6 +155,20 @@ public class MainActivity extends AppCompatActivity {
     public void hideKeyboard(View view) {
         InputMethodManager inputMethodManager =(InputMethodManager)getSystemService(MainActivity.INPUT_METHOD_SERVICE);
         inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
+    }
+
+    // Kontrola připojení
+    private void displayData() {
+        ConnectivityManager cn=(ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo nf=cn.getActiveNetworkInfo();
+        if(nf != null && nf.isConnected()==true )
+        {
+            wrong.setText("");
+        }
+        else
+        {
+            wrong.setText("Zkontrolujte prosím připojení k internetu");
+        }
     }
 
     /**
