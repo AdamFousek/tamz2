@@ -4,8 +4,14 @@
 
     <item
         android:id="@+id/flashlight"
-        android:title="Světlo" />
+        android:icon="@drawable/flashlight"
+        android:title="Světlo"
+        app:showAsAction="ifRoom"/>
+
     <item
         android:id="@+id/manulaScan"
-        android:title="Zadat kód ručně" />
+        android:icon="@drawable/edit"
+        android:title="Zadat kód"
+        app:showAsAction="ifRoom"/>
+
 </menu>

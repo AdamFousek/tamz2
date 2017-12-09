@@ -5,8 +5,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.example.adamfousek.tickitoprojekt.models.Event;
 
 import java.util.List;
 
@@ -40,6 +41,7 @@ public class EventAdapter extends ArrayAdapter<Event> {
 
             holder = new EntryHolder();
             holder.txtEventName = (TextView)row.findViewById(R.id.txtEventName);
+            holder.txtTickets = (TextView)row.findViewById(R.id.txtTickets);
 
             row.setTag(holder);
         }
@@ -49,13 +51,15 @@ public class EventAdapter extends ArrayAdapter<Event> {
         }
 
         Event entry = data.get(position);
-        holder.txtEventName.setText(entry.getName() );
+        holder.txtEventName.setText(entry.getName());
+        holder.txtTickets.setText("Ověřeno " + entry.getUsed_tickets() + " z " + entry.getTotal_tickets() + " lístků.");
 
         return row;
     }
 
     static class EntryHolder
     {
+        TextView txtTickets;
         TextView txtEventName;
     }
 

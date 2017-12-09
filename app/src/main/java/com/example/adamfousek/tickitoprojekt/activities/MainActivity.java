@@ -1,4 +1,4 @@
-package com.example.adamfousek.tickitoprojekt;
+package com.example.adamfousek.tickitoprojekt.activities;
 
 import android.content.Context;
 import android.content.Intent;
@@ -18,6 +18,11 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.example.adamfousek.tickitoprojekt.AESCrypt;
+import com.example.adamfousek.tickitoprojekt.R;
+import com.example.adamfousek.tickitoprojekt.models.User;
+import com.example.adamfousek.tickitoprojekt.models.ApiClient;
 
 import retrofit2.*;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -60,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
         String password = mySharedPref.getString("password", "");
         long timestamp = mySharedPref.getLong("timestamp", 1);
         long currentTimestamp = System.currentTimeMillis() / 1000L;
+        Toast.makeText(getApplicationContext(), "Session " + timestamp + " current: " + currentTimestamp, Toast.LENGTH_SHORT).show();
         try {
             password = AESCrypt.decrypt(password);
         } catch (Exception e){
@@ -188,7 +194,7 @@ public class MainActivity extends AppCompatActivity {
         // Získání údajů z API
         @Override
         protected Boolean doInBackground(Void... voids) {
-            UserClient userClient = retrofit.create(UserClient.class);
+            ApiClient userClient = retrofit.create(ApiClient.class);
 
             String base = name + ":" + password;
 
@@ -204,7 +210,7 @@ public class MainActivity extends AppCompatActivity {
                     mySharedEditor = mySharedPref.edit();
                     mySharedEditor.putString("name", name);
                     mySharedEditor.putString("password", AESCrypt.encrypt(password));
-                    mySharedEditor.putLong("timestamp", (System.currentTimeMillis() / 1000L)*24*60*60);
+                    mySharedEditor.putLong("timestamp", (System.currentTimeMillis() / 1000L)+(24*60*60));
                     mySharedEditor.apply();
                     logedIn = true;
                 }
@@ -219,7 +225,7 @@ public class MainActivity extends AppCompatActivity {
 
             if(success){
                 // Uživateli zobrazí Úspěch přepne do nové aktivity s User objektem a aktuální aktivitu ukončí
-                Toast.makeText(getApplicationContext(), "Přihlášení úspěšné", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getApplicationContext(), "Přihlášení úspěšné", Toast.LENGTH_SHORT).show();
                 Intent intent = new Intent(MainActivity.this, ListOfEventsActivity.class);
                 intent.putExtra("User", user);
                 startActivity(intent);

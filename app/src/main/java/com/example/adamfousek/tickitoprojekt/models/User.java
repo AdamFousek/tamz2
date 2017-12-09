@@ -1,5 +1,6 @@
-package com.example.adamfousek.tickitoprojekt;
+package com.example.adamfousek.tickitoprojekt.models;
 
+import com.example.adamfousek.tickitoprojekt.models.Event;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 

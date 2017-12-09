@@ -1,4 +1,4 @@
-package com.example.adamfousek.tickitoprojekt;
+package com.example.adamfousek.tickitoprojekt.models;
 
 import java.util.Date;
 

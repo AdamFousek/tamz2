@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:clickable="true"
     android:focusableInTouchMode="true"
-    tools:context="com.example.adamfousek.tickitoprojekt.MainActivity">
+    tools:context="com.example.adamfousek.tickitoprojekt.activities.MainActivity">
 
     <Button
         android:id="@+id/buttonLogin"
