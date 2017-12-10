@@ -17,4 +17,29 @@
 
     <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 
+    <style name="SuccessDialogTheme" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="android:background">@color/colorSuccess</item>
+        <item name="android:textColorPrimary">@color/colorTextPrimary</item>
+        <item name="buttonBarPositiveButtonStyle">@style/dialog_button.positive</item>
+    </style>
+
+    <style name="FailDialogTheme" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="android:background">@color/colorFail</item>
+        <item name="android:textColorPrimary">@color/colorTextPrimary</item>
+        <item name="buttonBarPositiveButtonStyle">@style/dialog_button.positive</item>
+    </style>
+
+    <style name="dialog_button">
+        <item name="android:textStyle">bold</item>
+        <item name="android:minWidth">64dp</item>
+        <item name="android:paddingLeft">8dp</item>
+        <item name="android:paddingRight">8dp</item>
+    </style>
+
+    <style name="dialog_button.positive">
+        <item name="android:gradientRadius">15dp</item>
+        <item name="android:layout_marginLeft">8dp</item>
+        <item name="android:textColor">@color/colorTextPrimaryDark</item>
+    </style>
+
 </resources>

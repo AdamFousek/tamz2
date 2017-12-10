@@ -3,7 +3,13 @@ package com.example.adamfousek.tickitoprojekt.activities;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
+import android.os.Handler;
+import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -15,15 +21,20 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.Toast;
 
 
 import com.example.adamfousek.tickitoprojekt.AESCrypt;
 import com.example.adamfousek.tickitoprojekt.R;
 import com.example.adamfousek.tickitoprojekt.models.ApiClient;
 import com.example.adamfousek.tickitoprojekt.models.Code;
+import com.example.adamfousek.tickitoprojekt.models.User;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.zxing.Result;
+
+import java.util.Timer;
+import java.util.TimerTask;
 
 import me.dm7.barcodescanner.zxing.ZXingScannerView;
 import retrofit2.Call;
@@ -52,6 +63,8 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
     private SharedPreferences mySharedPref;
     private SharedPreferences.Editor mySharedEditor;
 
+    private boolean activeBR = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -60,11 +73,26 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
         setContentView(scannerView);
         scannerView.setResultHandler(this);
         scannerView.startCamera();
+        activeBR = true;
+        displayData();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        activeBR = true;
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        activeBR = false;
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        activeBR = false;
         scannerView.stopCamera();
     }
 
@@ -85,13 +113,17 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item){
-        scannerView.stopCameraPreview();
         int id = item.getItemId();
         if(id == R.id.flashlight){
             // Rozsvícení světla
-            // @TODO Je třeba zapracovat na fixu kdy to nefunguje hezky - když se autofocusuje nejde zapnout světlo
-            scannerView.resumeCameraPreview(this);
+            scannerView.stopCameraPreview();
             scannerView.toggleFlash();
+            if(scannerView.getFlash()){
+                item.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.flashlight_on, null));
+            } else {
+                item.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.flashlight, null));
+            }
+            scannerView.resumeCameraPreview(this);
             return true;
         }
         if(id == R.id.manulaScan){
@@ -100,9 +132,9 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
             InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
             imm.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT);
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle("Title");
+            builder.setTitle("Zadejte kód");
 
-            input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+            input.setInputType(InputType.TYPE_CLASS_TEXT);
             builder.setView(input);
 
             builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
@@ -121,11 +153,37 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
             });
 
             builder.show();
-            scannerView.resumeCameraPreview(this);
         }
-        scannerView.resumeCameraPreview(this);
         return super.onOptionsItemSelected(item);
 
+    }
+
+    // Kontrola připojení
+    private void displayData() {
+        final Handler handler = new Handler();
+        Timer timer = new Timer();
+
+
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                handler.post(new Runnable() {
+                    public void run() {
+                        ConnectivityManager cn = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+                        NetworkInfo nf = cn.getActiveNetworkInfo();
+                        if (nf != null && nf.isConnected() == true) {
+
+                        } else {
+                            if (activeBR) {
+                                Toast.makeText(getApplicationContext(), "Zkontrolujte připojení k internetu", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    }
+                });
+            }
+        };
+
+        timer.schedule(task, 0, 5000);  // interval of one minute
     }
 
     /**
@@ -162,7 +220,6 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
 
             try {
                 Response<Code> response = call.execute();
-                Log.d("BYLOUSPESNE?", "BYLONEBONE: "+response.isSuccessful());
                 if(response.isSuccessful()){
                     code = response.body();
                     return true;
@@ -178,15 +235,15 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
 
             if(success){
                 // Vypsání kódu a jestli byl použitý nebo ne
-                AlertDialog.Builder builder = new AlertDialog.Builder(BarcodeReaderActivity.this);
+                AlertDialog.Builder builder;
                 if(code.getUsed() == null){
-                    builder.setTitle("Kod přijat");
-                    builder.setMessage(codeS + " uplatněn!");
+                    builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.SuccessDialogTheme);
+                    builder.setTitle("Kód přijat");
                 }else {
-                    builder.setTitle("Kod nebyl přijat");
+                    builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.FailDialogTheme);
+                    builder.setTitle("Kód nebyl přijat");
                     builder.setMessage("Kód již byl použit "+ DateFormat.format("yyyy-MM-dd hh:mm:ss", code.getUsed()));
                 }
-
                 builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
@@ -198,7 +255,21 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
                 alert1.show();
 
             }else{
-                // Nemělo by nastat
+                // Když kód k dané akci neexistuje
+                AlertDialog.Builder builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.FailDialogTheme);
+
+                builder.setTitle("Kód nebyl přijat");
+                builder.setMessage("Kód pro danou akci neexistuje");
+
+                builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        scannerView.resumeCameraPreview(BarcodeReaderActivity.this);
+                    }
+                });
+
+                AlertDialog alert1 = builder.create();
+                alert1.show();
             }
 
         }

@@ -24,6 +24,9 @@ import com.example.adamfousek.tickitoprojekt.R;
 import com.example.adamfousek.tickitoprojekt.models.User;
 import com.example.adamfousek.tickitoprojekt.models.ApiClient;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 import retrofit2.*;
 import retrofit2.converter.gson.GsonConverterFactory;
 
@@ -65,7 +68,6 @@ public class MainActivity extends AppCompatActivity {
         String password = mySharedPref.getString("password", "");
         long timestamp = mySharedPref.getLong("timestamp", 1);
         long currentTimestamp = System.currentTimeMillis() / 1000L;
-        Toast.makeText(getApplicationContext(), "Session " + timestamp + " current: " + currentTimestamp, Toast.LENGTH_SHORT).show();
         try {
             password = AESCrypt.decrypt(password);
         } catch (Exception e){
@@ -80,29 +82,7 @@ public class MainActivity extends AppCompatActivity {
         // Zjištění componentů + jejích eventy
         wrong = (TextView) findViewById(R.id.wrongLogin);
 
-        // Kontrola připojení
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                // TODO Auto-generated method stub
-                while (isRunning) {
-                    try {
-                        Thread.sleep(5000);
-                        mHandler.post(new Runnable() {
-
-                            @Override
-                            public void run() {
-                                // TODO Auto-generated method stub
-                                // Write your code here to update the UI.
-                                displayData();
-                            }
-                        });
-                    } catch (Exception e) {
-                        // TODO: handle exception
-                    }
-                }
-            }
-        }).start();
+        displayData();
 
         loginText = (EditText) findViewById(R.id.editTextLogin);
         loginText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
@@ -165,16 +145,30 @@ public class MainActivity extends AppCompatActivity {
 
     // Kontrola připojení
     private void displayData() {
-        ConnectivityManager cn=(ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo nf=cn.getActiveNetworkInfo();
-        if(nf != null && nf.isConnected()==true )
-        {
-            wrong.setText("");
-        }
-        else
-        {
-            wrong.setText("Zkontrolujte prosím připojení k internetu");
-        }
+        final Handler handler = new Handler();
+        Timer timer = new Timer();
+
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+            handler.post(new Runnable() {
+                public void run() {
+                ConnectivityManager cn=(ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+                NetworkInfo nf=cn.getActiveNetworkInfo();
+                if(nf != null && nf.isConnected()==true )
+                {
+                    wrong.setText("");
+                }
+                else
+                {
+                    wrong.setText("Zkontrolujte prosím připojení k internetu");
+                }
+                }
+            });
+            }
+        };
+
+        timer.schedule(task, 0, 5000);  // interval of one minute
     }
 
     /**
@@ -225,7 +219,7 @@ public class MainActivity extends AppCompatActivity {
 
             if(success){
                 // Uživateli zobrazí Úspěch přepne do nové aktivity s User objektem a aktuální aktivitu ukončí
-                //Toast.makeText(getApplicationContext(), "Přihlášení úspěšné", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), "Přihlášení úspěšné", Toast.LENGTH_SHORT).show();
                 Intent intent = new Intent(MainActivity.this, ListOfEventsActivity.class);
                 intent.putExtra("User", user);
                 startActivity(intent);

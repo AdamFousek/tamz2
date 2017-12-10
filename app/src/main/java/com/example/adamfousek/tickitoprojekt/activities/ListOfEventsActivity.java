@@ -1,22 +1,27 @@
 package com.example.adamfousek.tickitoprojekt.activities;
 
+import java.util.Timer;
+import java.util.TimerTask;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Base64;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.Toast;
+
 
 import com.example.adamfousek.tickitoprojekt.AESCrypt;
 import com.example.adamfousek.tickitoprojekt.models.ApiClient;
-import com.example.adamfousek.tickitoprojekt.models.Code;
 import com.example.adamfousek.tickitoprojekt.models.Codes;
 import com.example.adamfousek.tickitoprojekt.models.Event;
 import com.example.adamfousek.tickitoprojekt.EventAdapter;
@@ -43,7 +48,32 @@ public class ListOfEventsActivity extends AppCompatActivity {
     // Informace o uživateli
     private User user = new User();
     private Codes codes = new Codes();
+    private String login;
+    private String password;
+    private ListView lv;
+    private EventAdapter adapter;
 
+    private Timer timer;
+
+    private boolean activeLoE = false;
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        activeLoE = true;
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        activeLoE = false;
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        activeLoE = false;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,24 +86,17 @@ public class ListOfEventsActivity extends AppCompatActivity {
         // Získání informací o uživateli
         Intent intent = getIntent();
         user = (User)intent.getSerializableExtra("User");
+        login = mySharedPref.getString("name", "");
+        password = mySharedPref.getString("password", "");
+        try {
+            password = AESCrypt.decrypt(password);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        activeLoE = true;
+        setRepeatingAsyncTask();
+        displayData();
 
-        /*CodesTask mAuthTask = new CodesTask();
-        mAuthTask.execute((Void) null);*/
-
-        // Vyplnění layoutu akcema
-        // @TODO jestli není žádná vypsat text!!!
-        EventAdapter adapter = new EventAdapter(ListOfEventsActivity.this,R.layout.list_event_layout, user.getEvents());
-        ListView lv = (ListView)findViewById(R.id.listView1);
-        lv.setAdapter(adapter);
-        lv.setOnItemClickListener(new ListView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                Event event = (Event) adapterView.getItemAtPosition(i);
-
-                Intent intent = new Intent(view.getContext(), BarcodeReaderActivity.class);
-                startActivity(intent);
-            }
-        });
     }
 
     // Přídání menu
@@ -87,9 +110,6 @@ public class ListOfEventsActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item){
         int id = item.getItemId();
 
-        if(id == R.id.settings){
-            return true;
-        }
         if(id == R.id.logout){
             // Při odhlášení smažeme SharedPreferences aby se uživatel znovu nepřihlásil
             mySharedEditor = mySharedPref.edit();
@@ -102,28 +122,73 @@ public class ListOfEventsActivity extends AppCompatActivity {
             finish();
         }
         return super.onOptionsItemSelected(item);
+    }
 
+    // Kontrola připojení
+    private void displayData() {
+        final Handler handler = new Handler();
+        Timer timer = new Timer();
+
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                handler.post(new Runnable() {
+                    public void run() {
+                        ConnectivityManager cn = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+                        NetworkInfo nf = cn.getActiveNetworkInfo();
+                        if (nf != null && nf.isConnected() == true) {
+
+                        } else {
+                            if (activeLoE) {
+                                Toast.makeText(getApplicationContext(), "Zkontrolujte připojení k internetu", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    }
+                });
+            }
+        };
+        timer.schedule(task, 0, 5000);  // interval of one minute
+
+
+    }
+
+    // Update list view
+    private void setRepeatingAsyncTask() {
+
+        final Handler handler = new Handler();
+        Timer timer = new Timer();
+
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                handler.post(new Runnable() {
+                    public void run() {
+                        try {
+                            ListViewTask jsonTask = new ListViewTask(login, password);
+                            jsonTask.execute();
+                        } catch (Exception e) {
+                            // error, do something
+                        }
+                    }
+                });
+            }
+        };
+
+        timer.schedule(task, 0, 5000);  // interval of one minute
     }
 
     /**
      * Classa na AsyncTask - kontrola údajů api
      */
-    public class CodesTask extends AsyncTask<Void, Void, Boolean> {
+    public class ListViewTask extends AsyncTask<Void, Void, Boolean> {
 
         private final String name;
         private final String password;
         private Boolean logedIn = false;
 
-        CodesTask(){
-            mySharedPref = getSharedPreferences("myPref", Context.MODE_PRIVATE);
-            this.name = mySharedPref.getString("name", "");
-            String pass = mySharedPref.getString("password", "");
-            try {
-                pass = AESCrypt.decrypt(pass);
-            } catch (Exception e){
-                e.printStackTrace();
-            }
-            this.password = pass;
+        ListViewTask(String name, String password){
+            this.name = name;
+            this.password = password;
         }
 
         // Získání údajů z API
@@ -132,20 +197,15 @@ public class ListOfEventsActivity extends AppCompatActivity {
             ApiClient userClient = retrofit.create(ApiClient.class);
 
             String base = name + ":" + password;
-
             String authHeader = "Basic " + Base64.encodeToString(base.getBytes(), Base64.NO_WRAP);
-            Call<Codes> call = userClient.getCodes(authHeader, "6");
+            Call<User> call = userClient.getUser(authHeader);
 
             try {
-                Response<Codes> response = call.execute();
-                Log.d("BYLOUSPESNE?", "BYLONEBONE: "+response.isSuccessful());
+                Response<User> response = call.execute();
                 if(response.isSuccessful()){
-                    codes = response.body();
-                    // Ukládání údajů do sharedPreferences - na 1 den
-                    for (String c : codes.getCodes()){
-                        Log.d("TUTO", "TU: "+c);
-                    }
-
+                    user = response.body();
+                    user.setName(name);
+                    logedIn = true;
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -157,9 +217,21 @@ public class ListOfEventsActivity extends AppCompatActivity {
         protected void onPostExecute(final Boolean success){
 
             if(success){
+                // Vyplnění layoutu akcema
+                adapter = new EventAdapter(ListOfEventsActivity.this,R.layout.list_event_layout, user.getEvents());
+                lv = (ListView)findViewById(R.id.listView1);
+                lv.setAdapter(adapter);
+                lv.setOnItemClickListener(new ListView.OnItemClickListener() {
+                    @Override
+                    public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                        Event event = (Event) adapterView.getItemAtPosition(i);
 
+                        Intent intent = new Intent(view.getContext(), BarcodeReaderActivity.class);
+                        startActivity(intent);
+                    }
+                });
             }else{
-                // Nemělo by k tomuto dojít
+                // Something wrong
             }
 
         }

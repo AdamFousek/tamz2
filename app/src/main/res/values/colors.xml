@@ -5,4 +5,6 @@
     <color name="colorAccent">#747474</color>
     <color name="colorTextPrimary">#FFFFFF</color>
     <color name="colorTextPrimaryDark">#000000</color>
+    <color name="colorFail">#FF0000</color>
+    <color name="colorSuccess">#00AA00</color>
 </resources>
