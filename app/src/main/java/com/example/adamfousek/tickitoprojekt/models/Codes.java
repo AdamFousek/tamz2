@@ -3,6 +3,8 @@ package com.example.adamfousek.tickitoprojekt.models;
 import com.google.gson.annotations.SerializedName;
 
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Map;
 
 /**
  * Created by adamfousek on 09.12.17.
@@ -11,16 +13,8 @@ import java.util.ArrayList;
 public class Codes {
 
     @SerializedName("codes")
-    private ArrayList<String> codes = new ArrayList<String>();
+    private Map<String, Date> codes;
     private int eventId;
-
-    public ArrayList<String> getCodes() {
-        return codes;
-    }
-
-    public void setCodes(ArrayList<String> codes) {
-        this.codes = codes;
-    }
 
     public int getEventId() {
         return eventId;
@@ -28,5 +22,13 @@ public class Codes {
 
     public void setEventId(int eventId) {
         this.eventId = eventId;
+    }
+
+    public Map<String, Date> getCodes() {
+        return codes;
+    }
+
+    public void setCodes(Map<String, Date> codes) {
+        this.codes = codes;
     }
 }

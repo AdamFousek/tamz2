@@ -18,9 +18,9 @@ public interface ApiClient {
     Call<User> getUser(@Header("Authorization") String authHeader);
 
     @GET("api/v1/event/{id}/code/")
-    Call<Codes> getCodes(@Header("Authorization") String authHeader, @Path("id") String id);
+    Call<Codes> getCodes(@Header("Authorization") String authHeader, @Path("id") int id);
 
-    @GET("api/v1/code/{code}/validate/")
-    Call<Code> checkCode(@Header("Authorization") String authHeader, @Path("code") String code);
+    @GET("api/v1/event/{eventId}/code/{code}/validate/")
+    Call<Code> checkCode(@Header("Authorization") String authHeader, @Path("eventId") int eventId, @Path("code") String code);
 
 }

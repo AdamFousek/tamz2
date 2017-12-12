@@ -178,7 +178,7 @@ public class ListOfEventsActivity extends AppCompatActivity {
     }
 
     /**
-     * Classa na AsyncTask - kontrola údajů api
+     * Classa na AsyncTask - kontrola eventů a kodů
      */
     public class ListViewTask extends AsyncTask<Void, Void, Boolean> {
 
@@ -227,6 +227,7 @@ public class ListOfEventsActivity extends AppCompatActivity {
                         Event event = (Event) adapterView.getItemAtPosition(i);
 
                         Intent intent = new Intent(view.getContext(), BarcodeReaderActivity.class);
+                        intent.putExtra("Event", event);
                         startActivity(intent);
                     }
                 });

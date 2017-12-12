@@ -2,9 +2,8 @@ package com.example.adamfousek.tickitoprojekt.activities;
 
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
@@ -28,11 +27,14 @@ import com.example.adamfousek.tickitoprojekt.AESCrypt;
 import com.example.adamfousek.tickitoprojekt.R;
 import com.example.adamfousek.tickitoprojekt.models.ApiClient;
 import com.example.adamfousek.tickitoprojekt.models.Code;
-import com.example.adamfousek.tickitoprojekt.models.User;
+import com.example.adamfousek.tickitoprojekt.models.Codes;
+import com.example.adamfousek.tickitoprojekt.models.Event;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.zxing.Result;
 
+import java.util.Date;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -58,6 +60,8 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
     private ZXingScannerView scannerView;
     private String codeString = "";
     private Code code = new Code();
+    private Codes codes = new Codes();
+    private Event event;
 
     // SharedPreferences
     private SharedPreferences mySharedPref;
@@ -68,6 +72,10 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        Intent intent = getIntent();
+        event = (Event)intent.getSerializableExtra("Event");
+
         // Nastavení layoutu pro kameru
         scannerView = new ZXingScannerView(this);
         setContentView(scannerView);
@@ -75,6 +83,10 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
         scannerView.startCamera();
         activeBR = true;
         displayData();
+
+        CodeSyncTask codeSync = new CodeSyncTask();
+        codeSync.execute((Void) null);
+
     }
 
     @Override
@@ -187,7 +199,7 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
     }
 
     /**
-     * Classa na AsyncTask - kontrola údajů api
+     * Classa na AsyncTask - kontrola lístků
      */
     public class CheckCodeTask extends AsyncTask<Void, Void, Boolean> {
 
@@ -216,7 +228,7 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
             String base = name + ":" + password;
 
             String authHeader = "Basic " + Base64.encodeToString(base.getBytes(), Base64.NO_WRAP);
-            Call<Code> call = userClient.checkCode(authHeader, codeS);
+            Call<Code> call = userClient.checkCode(authHeader, event.getId(), codeS);
 
             try {
                 Response<Code> response = call.execute();
@@ -232,7 +244,7 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
 
         @Override
         protected void onPostExecute(final Boolean success){
-
+            scannerView.stopCameraPreview();
             if(success){
                 // Vypsání kódu a jestli byl použitý nebo ne
                 AlertDialog.Builder builder;
@@ -242,7 +254,7 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
                 }else {
                     builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.FailDialogTheme);
                     builder.setTitle("Kód nebyl přijat");
-                    builder.setMessage("Kód již byl použit "+ DateFormat.format("yyyy-MM-dd hh:mm:ss", code.getUsed()));
+                    builder.setMessage("Kód již byl použit "+ DateFormat.format("yyyy-MM-dd kk:mm:ss", code.getUsed()));
                 }
                 builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     @Override
@@ -279,5 +291,74 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
         }
 
     }
+
+    /**
+     * Classa na AsyncTask - Code
+     */
+    public class CodeSyncTask extends AsyncTask<Void, Void, Boolean> {
+
+        private final String name;
+        private final String password;
+
+        CodeSyncTask(){
+            mySharedPref = getSharedPreferences("myPref", Context.MODE_PRIVATE);
+            this.name = mySharedPref.getString("name", "");
+            String pass = mySharedPref.getString("password", "");
+            try {
+                pass = AESCrypt.decrypt(pass);
+            } catch (Exception e){
+                e.printStackTrace();
+            }
+            this.password = pass;
+        }
+
+        // Získání údajů z API
+        @Override
+        protected Boolean doInBackground(Void... voids) {
+            ApiClient userClient = retrofit.create(ApiClient.class);
+
+            String base = name + ":" + password;
+
+            String authHeader = "Basic " + Base64.encodeToString(base.getBytes(), Base64.NO_WRAP);
+            Call<Codes> call = userClient.getCodes(authHeader, event.getId());
+
+            try {
+                Response<Codes> response = call.execute();
+                if(response.isSuccessful()){
+                    codes = response.body();
+                    return true;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return false;
+        }
+
+        @Override
+        protected void onPostExecute(final Boolean success){
+            if(success){
+
+                for (Map.Entry<String, Date> entry : codes.getCodes().entrySet())
+                {
+                    if(entry.getValue() == null){
+                        Log.d("Kody:", "Všechnykody: "+entry.getKey()+" - null");
+                    } else {
+                        Log.d("Kody:", "Všechnykody: "+entry.getKey()+" - "+DateFormat.format("yyyy-MM-dd kk:mm:ss", entry.getValue()));
+                    }
+
+                }
+
+            }else{
+                // Nějaká chyba
+            }
+
+        }
+
+        @Override
+        protected void  onCancelled() {
+        }
+
+    }
+
 
 }
