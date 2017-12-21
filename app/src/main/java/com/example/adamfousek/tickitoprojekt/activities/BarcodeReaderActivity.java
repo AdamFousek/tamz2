@@ -124,6 +124,13 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        activeBR = true;
+        scannerView.startCamera();
+    }
+
+    @Override
     protected void onDestroy()
     {
         super.onDestroy();

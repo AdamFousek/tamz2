@@ -48,18 +48,26 @@ public class ListOfEventsActivity extends AppCompatActivity {
     private ListView lv;
     private EventAdapter adapter;
 
-    private boolean activeLoE = false;
+    private boolean activeLoE = true;
 
     @Override
     public void onStart() {
         super.onStart();
         activeLoE = true;
+        displayData();
     }
 
     @Override
     public void onPause() {
         super.onPause();
         activeLoE = false;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        activeLoE = true;
+        displayData();
     }
 
     @Override
@@ -82,7 +90,6 @@ public class ListOfEventsActivity extends AppCompatActivity {
         lv = (ListView)findViewById(R.id.listView1);
         lv.setAdapter(adapter);
 
-        displayData();
     }
 
     // Přídání menu
