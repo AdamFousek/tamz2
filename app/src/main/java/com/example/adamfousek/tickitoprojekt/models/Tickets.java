@@ -10,7 +10,7 @@ import java.util.Map;
  * Created by adamfousek on 09.12.17.
  */
 
-public class Codes {
+public class Tickets {
 
     @SerializedName("codes")
     private Map<String, Date> codes;

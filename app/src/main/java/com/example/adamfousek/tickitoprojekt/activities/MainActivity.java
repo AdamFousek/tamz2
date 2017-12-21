@@ -46,14 +46,11 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences mySharedPref;
     private SharedPreferences.Editor mySharedEditor;
 
-    // Retrofit cool knihovna na api
+    // Retrofit knihovna na api
     private final Retrofit.Builder builder = new Retrofit.Builder()
             .baseUrl("https://www.tickito.cz/")
             .addConverterFactory(GsonConverterFactory.create());
     private final Retrofit retrofit = builder.build();
-
-    Handler mHandler = new Handler();
-    boolean isRunning = true;
 
 
 
@@ -62,8 +59,25 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // SharedPreference - po prvním přihlášení se nastaví cache na 1 den
-        mySharedPref = getSharedPreferences("myPref", Context.MODE_PRIVATE);
+        componentsSettings();
+
+        checkLogin();
+
+        initListeners();
+
+        checkConnection();
+    }
+
+    private void componentsSettings(){
+        wrong = (TextView) findViewById(R.id.wrongLogin);
+        loginText = (EditText) findViewById(R.id.editTextLogin);
+        passwordText = (EditText) findViewById(R.id.editTextPassword);
+        buttonLogin = (Button) findViewById(R.id.buttonLogin);
+    }
+
+    private void checkLogin(){
+        // SharedPreference - po prvním přihlášení se nastaví cache na 1 den - kontrola jestli vyprachala
+        mySharedPref = getSharedPreferences("UserInfo", Context.MODE_PRIVATE);
         String name = mySharedPref.getString("name", "");
         String password = mySharedPref.getString("password", "");
         long timestamp = mySharedPref.getLong("timestamp", 1);
@@ -79,12 +93,9 @@ public class MainActivity extends AppCompatActivity {
                 mAuthTask.execute((Void) null);
             }
         }
-        // Zjištění componentů + jejích eventy
-        wrong = (TextView) findViewById(R.id.wrongLogin);
+    }
 
-        displayData();
-
-        loginText = (EditText) findViewById(R.id.editTextLogin);
+    private void initListeners() {
         loginText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
             public void onFocusChange(View v, boolean hasFocus){
@@ -93,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-        passwordText = (EditText) findViewById(R.id.editTextPassword);
+
         passwordText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
             public void onFocusChange(View v, boolean hasFocus){
@@ -103,8 +114,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Zjištění přihlašovácího buttonu, jeho touchlistener
-        buttonLogin = (Button) findViewById(R.id.buttonLogin);
         buttonLogin.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
@@ -138,13 +147,13 @@ public class MainActivity extends AppCompatActivity {
      * Schování klávesnice když kliknu mimo text componenty
      * @param view
      */
-    public void hideKeyboard(View view) {
+    private void hideKeyboard(View view) {
         InputMethodManager inputMethodManager =(InputMethodManager)getSystemService(MainActivity.INPUT_METHOD_SERVICE);
         inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
     }
 
     // Kontrola připojení
-    private void displayData() {
+    private void checkConnection() {
         final Handler handler = new Handler();
         Timer timer = new Timer();
 
@@ -168,7 +177,7 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        timer.schedule(task, 0, 5000);  // interval of one minute
+        timer.schedule(task, 0, 5000);  // Co 5 sekund
     }
 
     /**
@@ -200,11 +209,12 @@ public class MainActivity extends AppCompatActivity {
                 if(response.isSuccessful()){
                     user = response.body();
                     user.setName(name);
+                    user.setPassword(password);
                     // Ukládání údajů do sharedPreferences - na 1 den
                     mySharedEditor = mySharedPref.edit();
                     mySharedEditor.putString("name", name);
                     mySharedEditor.putString("password", AESCrypt.encrypt(password));
-                    mySharedEditor.putLong("timestamp", (System.currentTimeMillis() / 1000L)+(24*60*60));
+                    mySharedEditor.putLong("timestamp", (System.currentTimeMillis() / 1000L)+(3*60*60));
                     mySharedEditor.apply();
                     logedIn = true;
                 }

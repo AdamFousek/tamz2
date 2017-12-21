@@ -20,9 +20,7 @@ import android.widget.ListView;
 import android.widget.Toast;
 
 
-import com.example.adamfousek.tickitoprojekt.AESCrypt;
 import com.example.adamfousek.tickitoprojekt.models.ApiClient;
-import com.example.adamfousek.tickitoprojekt.models.Codes;
 import com.example.adamfousek.tickitoprojekt.models.Event;
 import com.example.adamfousek.tickitoprojekt.EventAdapter;
 import com.example.adamfousek.tickitoprojekt.R;
@@ -47,13 +45,8 @@ public class ListOfEventsActivity extends AppCompatActivity {
 
     // Informace o uživateli
     private User user = new User();
-    private Codes codes = new Codes();
-    private String login;
-    private String password;
     private ListView lv;
     private EventAdapter adapter;
-
-    private Timer timer;
 
     private boolean activeLoE = false;
 
@@ -80,23 +73,16 @@ public class ListOfEventsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list_of_events);
 
-        // Ziskání SharedPreferences
-        mySharedPref = getSharedPreferences("myPref", Context.MODE_PRIVATE);
-
         // Získání informací o uživateli
         Intent intent = getIntent();
         user = (User)intent.getSerializableExtra("User");
-        login = mySharedPref.getString("name", "");
-        password = mySharedPref.getString("password", "");
-        try {
-            password = AESCrypt.decrypt(password);
-        } catch (Exception e){
-            e.printStackTrace();
-        }
         activeLoE = true;
-        setRepeatingAsyncTask();
-        displayData();
 
+        adapter = new EventAdapter(ListOfEventsActivity.this,R.layout.list_event_layout, user.getEvents());
+        lv = (ListView)findViewById(R.id.listView1);
+        lv.setAdapter(adapter);
+
+        displayData();
     }
 
     // Přídání menu
@@ -112,6 +98,7 @@ public class ListOfEventsActivity extends AppCompatActivity {
 
         if(id == R.id.logout){
             // Při odhlášení smažeme SharedPreferences aby se uživatel znovu nepřihlásil
+            mySharedPref = getSharedPreferences("UserInfo", Context.MODE_PRIVATE);
             mySharedEditor = mySharedPref.edit();
             mySharedEditor.putString("name", "");
             mySharedEditor.putString("password", "");
@@ -127,17 +114,22 @@ public class ListOfEventsActivity extends AppCompatActivity {
     // Kontrola připojení
     private void displayData() {
         final Handler handler = new Handler();
-        Timer timer = new Timer();
+        final Timer timer = new Timer();
 
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
                 handler.post(new Runnable() {
                     public void run() {
+                        if(!activeLoE){
+                            timer.cancel();
+                            timer.purge();
+                        }
                         ConnectivityManager cn = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
                         NetworkInfo nf = cn.getActiveNetworkInfo();
                         if (nf != null && nf.isConnected() == true) {
-
+                            ListViewTask checkEvents = new ListViewTask(user.getName(), user.getPassword());
+                            checkEvents.execute();
                         } else {
                             if (activeLoE) {
                                 Toast.makeText(getApplicationContext(), "Zkontrolujte připojení k internetu", Toast.LENGTH_SHORT).show();
@@ -147,33 +139,6 @@ public class ListOfEventsActivity extends AppCompatActivity {
                 });
             }
         };
-        timer.schedule(task, 0, 5000);  // interval of one minute
-
-
-    }
-
-    // Update list view
-    private void setRepeatingAsyncTask() {
-
-        final Handler handler = new Handler();
-        Timer timer = new Timer();
-
-        TimerTask task = new TimerTask() {
-            @Override
-            public void run() {
-                handler.post(new Runnable() {
-                    public void run() {
-                        try {
-                            ListViewTask jsonTask = new ListViewTask(login, password);
-                            jsonTask.execute();
-                        } catch (Exception e) {
-                            // error, do something
-                        }
-                    }
-                });
-            }
-        };
-
         timer.schedule(task, 0, 5000);  // interval of one minute
     }
 
@@ -203,8 +168,7 @@ public class ListOfEventsActivity extends AppCompatActivity {
             try {
                 Response<User> response = call.execute();
                 if(response.isSuccessful()){
-                    user = response.body();
-                    user.setName(name);
+                    user.setEvents(response.body().getEvents());
                     logedIn = true;
                 }
             } catch (Exception e) {
@@ -218,9 +182,14 @@ public class ListOfEventsActivity extends AppCompatActivity {
 
             if(success){
                 // Vyplnění layoutu akcema
-                adapter = new EventAdapter(ListOfEventsActivity.this,R.layout.list_event_layout, user.getEvents());
-                lv = (ListView)findViewById(R.id.listView1);
-                lv.setAdapter(adapter);
+                if(lv.getAdapter()==null)
+                    lv.setAdapter(adapter);
+                else{
+                    adapter.clear();
+                    adapter.addAll(user.getEvents());
+                    adapter.notifyDataSetChanged();
+                }
+                adapter.notifyDataSetChanged();
                 lv.setOnItemClickListener(new ListView.OnItemClickListener() {
                     @Override
                     public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
@@ -228,6 +197,7 @@ public class ListOfEventsActivity extends AppCompatActivity {
 
                         Intent intent = new Intent(view.getContext(), BarcodeReaderActivity.class);
                         intent.putExtra("Event", event);
+                        intent.putExtra("User", user);
                         startActivity(intent);
                     }
                 });

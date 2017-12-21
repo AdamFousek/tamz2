@@ -14,6 +14,17 @@ public class Event implements Serializable {
     private int used_tickets;
     private int total_tickets;
 
+    public Event(){
+
+    }
+
+    public Event(int id, String name, int used_tickets, int total_tickets){
+        this.id = id;
+        this.name = name;
+        this.used_tickets = used_tickets;
+        this.total_tickets = total_tickets;
+    }
+
     public int getId() {
         return id;
     }

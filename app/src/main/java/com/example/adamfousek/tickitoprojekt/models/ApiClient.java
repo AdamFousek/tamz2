@@ -1,7 +1,5 @@
 package com.example.adamfousek.tickitoprojekt.models;
 
-import com.example.adamfousek.tickitoprojekt.models.User;
-
 import retrofit2.Call;
 import retrofit2.http.GET;
 import retrofit2.http.Header;
@@ -18,7 +16,7 @@ public interface ApiClient {
     Call<User> getUser(@Header("Authorization") String authHeader);
 
     @GET("api/v1/event/{id}/code/")
-    Call<Codes> getCodes(@Header("Authorization") String authHeader, @Path("id") int id);
+    Call<Tickets> getCodes(@Header("Authorization") String authHeader, @Path("id") int id);
 
     @GET("api/v1/event/{eventId}/code/{code}/validate/")
     Call<Code> checkCode(@Header("Authorization") String authHeader, @Path("eventId") int eventId, @Path("code") String code);

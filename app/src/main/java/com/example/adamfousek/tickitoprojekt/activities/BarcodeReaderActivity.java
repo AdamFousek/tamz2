@@ -18,26 +18,31 @@ import android.util.Base64;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.Toast;
 
 
 import com.example.adamfousek.tickitoprojekt.AESCrypt;
+import com.example.adamfousek.tickitoprojekt.CustomCameraSettings;
 import com.example.adamfousek.tickitoprojekt.R;
 import com.example.adamfousek.tickitoprojekt.models.ApiClient;
 import com.example.adamfousek.tickitoprojekt.models.Code;
-import com.example.adamfousek.tickitoprojekt.models.Codes;
+import com.example.adamfousek.tickitoprojekt.models.Tickets;
 import com.example.adamfousek.tickitoprojekt.models.Event;
+import com.example.adamfousek.tickitoprojekt.models.User;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.zxing.Result;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import me.dm7.barcodescanner.core.IViewFinder;
 import me.dm7.barcodescanner.zxing.ZXingScannerView;
 import retrofit2.Call;
 import retrofit2.Response;
@@ -60,8 +65,10 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
     private ZXingScannerView scannerView;
     private String codeString = "";
     private Code code = new Code();
-    private Codes codes = new Codes();
+    private Tickets tickets;
+    private ArrayList<String> usedTickets= new ArrayList<>();
     private Event event;
+    private User user;
 
     // SharedPreferences
     private SharedPreferences mySharedPref;
@@ -73,20 +80,28 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         Intent intent = getIntent();
         event = (Event)intent.getSerializableExtra("Event");
+        user = (User)intent.getSerializableExtra("User");
 
         // Nastavení layoutu pro kameru
-        scannerView = new ZXingScannerView(this);
+        scannerView = new ZXingScannerView(this) {
+
+            @Override
+            protected IViewFinder createViewFinderView(Context context) {
+                return new CustomCameraSettings(context);
+            }
+
+        };
         setContentView(scannerView);
         scannerView.setResultHandler(this);
         scannerView.startCamera();
         activeBR = true;
-        displayData();
+        checkConnection();
 
-        CodeSyncTask codeSync = new CodeSyncTask();
-        codeSync.execute((Void) null);
-
+        syncCodes();
     }
 
     @Override
@@ -108,12 +123,83 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
         scannerView.stopCamera();
     }
 
-    // @TODO Naskenovaný kód se uloží lokálně a odešle se na api a zjistí jestli již byl použitý
+    @Override
+    protected void onDestroy()
+    {
+        super.onDestroy();
+        activeBR = false;
+    }
+
     @Override
     public void handleResult(Result result) {
         final String myResult = result.getText();
-        CheckCodeTask mAuthTask = new CheckCodeTask(myResult);
-        mAuthTask.execute((Void) null);
+        if(isInternet()){
+            CheckCodeTask mAuthTask = new CheckCodeTask(myResult);
+            mAuthTask.execute();
+        } else {
+            if(tickets != null) {
+                if (tickets.getCodes().containsKey(myResult)) {
+                    AlertDialog.Builder builder;
+                    if (tickets.getCodes().get(myResult) == null) {
+                        builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.SuccessDialogTheme);
+                        builder.setTitle("Kód přijat");
+                        tickets.getCodes().put(myResult, new Date());
+                        usedTickets.add(myResult);
+                    } else {
+                        builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.FailDialogTheme);
+                        builder.setTitle("Kód nebyl přijat");
+                        builder.setMessage("Kód již byl použit " + DateFormat.format("HH:mm:ss dd.MM.yyyy", tickets.getCodes().get(myResult)));
+                    }
+                    builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            scannerView.resumeCameraPreview(BarcodeReaderActivity.this);
+                        }
+                    });
+
+                    AlertDialog alertCode = builder.create();
+                    alertCode.setCancelable(false);
+                    alertCode.setCanceledOnTouchOutside(false);
+                    alertCode.show();
+                } else {
+                    // Když kód k dané akci neexistuje
+                    AlertDialog.Builder builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.FailDialogTheme);
+
+                    builder.setTitle("Kód nebyl přijat");
+                    builder.setMessage("Kód pro danou akci neexistuje");
+
+                    builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            scannerView.resumeCameraPreview(BarcodeReaderActivity.this);
+                        }
+                    });
+
+                    AlertDialog alertCode = builder.create();
+                    alertCode.setCancelable(false);
+                    alertCode.setCanceledOnTouchOutside(false);
+                    alertCode.show();
+                }
+            } else {
+                AlertDialog.Builder builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.FailDialogTheme);
+
+                builder.setTitle("Vstupenky nebyly staženy");
+                builder.setMessage("Prosím, obnovte internetové spojení pro stažení lístků!");
+
+                builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        scannerView.resumeCameraPreview(BarcodeReaderActivity.this);
+                    }
+                });
+
+                AlertDialog alertCode = builder.create();
+                alertCode.setCancelable(false);
+                alertCode.setCanceledOnTouchOutside(false);
+                alertCode.show();
+            }
+        }
+
     }
 
     @Override
@@ -170,10 +256,9 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
 
     }
 
-    // Kontrola připojení
-    private void displayData() {
+    private void syncCodes() {
         final Handler handler = new Handler();
-        Timer timer = new Timer();
+        final Timer timer = new Timer();
 
 
         TimerTask task = new TimerTask() {
@@ -181,14 +266,47 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
             public void run() {
                 handler.post(new Runnable() {
                     public void run() {
-                        ConnectivityManager cn = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-                        NetworkInfo nf = cn.getActiveNetworkInfo();
-                        if (nf != null && nf.isConnected() == true) {
+                        if(!activeBR){
+                            timer.cancel();
+                            timer.purge();
+                        }
+                        if (isInternet()) {
+                            TicketsSyncTask ticketsSync = new TicketsSyncTask();
+                            ticketsSync.execute();
+                        } else {
+                            Toast.makeText(getApplicationContext(), "Zkontrolujte připojení k internetu", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+            }
+        };
+
+        timer.schedule(task, 0, 60*1000);  // interval of one minute
+
+        if(!activeBR){
+            timer.cancel();
+        }
+    }
+
+    // Kontrola připojení
+    private void checkConnection() {
+        final Handler handler = new Handler();
+        final Timer timer = new Timer();
+
+
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                handler.post(new Runnable() {
+                    public void run() {
+                        if(!activeBR){
+                            timer.cancel();
+                            timer.purge();
+                        }
+                        if (isInternet()) {
 
                         } else {
-                            if (activeBR) {
-                                Toast.makeText(getApplicationContext(), "Zkontrolujte připojení k internetu", Toast.LENGTH_SHORT).show();
-                            }
+                            Toast.makeText(getApplicationContext(), "Zkontrolujte připojení k internetu", Toast.LENGTH_SHORT).show();
                         }
                     }
                 });
@@ -196,6 +314,16 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
         };
 
         timer.schedule(task, 0, 5000);  // interval of one minute
+
+        if(!activeBR){
+            timer.cancel();
+        }
+    }
+
+    private boolean isInternet(){
+        ConnectivityManager cn = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo nf = cn.getActiveNetworkInfo();
+        return nf != null && nf.isConnected() == true;
     }
 
     /**
@@ -208,7 +336,7 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
         private final String codeS;
 
         CheckCodeTask(String code){
-            mySharedPref = getSharedPreferences("myPref", Context.MODE_PRIVATE);
+            mySharedPref = getSharedPreferences("UserInfo", Context.MODE_PRIVATE);
             this.name = mySharedPref.getString("name", "");
             String pass = mySharedPref.getString("password", "");
             try {
@@ -251,10 +379,11 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
                 if(code.getUsed() == null){
                     builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.SuccessDialogTheme);
                     builder.setTitle("Kód přijat");
+                    tickets.getCodes().put(code.getCode(), new Date());
                 }else {
                     builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.FailDialogTheme);
                     builder.setTitle("Kód nebyl přijat");
-                    builder.setMessage("Kód již byl použit "+ DateFormat.format("yyyy-MM-dd kk:mm:ss", code.getUsed()));
+                    builder.setMessage("Kód již byl použit "+ DateFormat.format("HH:mm:ss dd.MM.yyyy", code.getUsed()));
                 }
                 builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     @Override
@@ -263,8 +392,10 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
                     }
                 });
 
-                AlertDialog alert1 = builder.create();
-                alert1.show();
+                AlertDialog alertCode = builder.create();
+                alertCode.setCancelable(false);
+                alertCode.setCanceledOnTouchOutside(false);
+                alertCode.show();
 
             }else{
                 // Když kód k dané akci neexistuje
@@ -280,8 +411,10 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
                     }
                 });
 
-                AlertDialog alert1 = builder.create();
-                alert1.show();
+                AlertDialog alertCode = builder.create();
+                alertCode.setCancelable(false);
+                alertCode.setCanceledOnTouchOutside(false);
+                alertCode.show();
             }
 
         }
@@ -295,21 +428,14 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
     /**
      * Classa na AsyncTask - Code
      */
-    public class CodeSyncTask extends AsyncTask<Void, Void, Boolean> {
+    public class TicketsSyncTask extends AsyncTask<Void, Void, Boolean> {
 
         private final String name;
         private final String password;
 
-        CodeSyncTask(){
-            mySharedPref = getSharedPreferences("myPref", Context.MODE_PRIVATE);
-            this.name = mySharedPref.getString("name", "");
-            String pass = mySharedPref.getString("password", "");
-            try {
-                pass = AESCrypt.decrypt(pass);
-            } catch (Exception e){
-                e.printStackTrace();
-            }
-            this.password = pass;
+        TicketsSyncTask(){
+            this.password = user.getPassword();
+            this.name = user.getName();
         }
 
         // Získání údajů z API
@@ -320,12 +446,24 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
             String base = name + ":" + password;
 
             String authHeader = "Basic " + Base64.encodeToString(base.getBytes(), Base64.NO_WRAP);
-            Call<Codes> call = userClient.getCodes(authHeader, event.getId());
+
+            for(String s : usedTickets){
+                Call<Code> call = userClient.checkCode(authHeader, event.getId(), s);
+
+                try {
+                    Response<Code> response = call.execute();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            usedTickets.clear();
+
+            Call<Tickets> call = userClient.getCodes(authHeader, event.getId());
 
             try {
-                Response<Codes> response = call.execute();
+                Response<Tickets> response = call.execute();
                 if(response.isSuccessful()){
-                    codes = response.body();
+                    tickets = response.body();
                     return true;
                 }
             } catch (Exception e) {
@@ -337,17 +475,7 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
         @Override
         protected void onPostExecute(final Boolean success){
             if(success){
-
-                for (Map.Entry<String, Date> entry : codes.getCodes().entrySet())
-                {
-                    if(entry.getValue() == null){
-                        Log.d("Kody:", "Všechnykody: "+entry.getKey()+" - null");
-                    } else {
-                        Log.d("Kody:", "Všechnykody: "+entry.getKey()+" - "+DateFormat.format("yyyy-MM-dd kk:mm:ss", entry.getValue()));
-                    }
-
-                }
-
+                // Uložení proběhlo v pořádku
             }else{
                 // Nějaká chyba
             }
