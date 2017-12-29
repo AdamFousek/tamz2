@@ -150,12 +150,14 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
                     if (tickets.getCodes().get(myResult) == null) {
                         builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.SuccessDialogTheme);
                         builder.setTitle("Kód přijat");
-                        tickets.getCodes().put(myResult, new Date());
+                        Code tmp = tickets.getCodes().get(myResult);
+                        tmp.setUsed(new Date());
+                        tickets.getCodes().put(myResult, tmp);
                         usedTickets.add(myResult);
                     } else {
                         builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.FailDialogTheme);
                         builder.setTitle("Kód nebyl přijat");
-                        builder.setMessage("Kód již byl použit " + DateFormat.format("HH:mm:ss dd.MM.yyyy", tickets.getCodes().get(myResult)));
+                        builder.setMessage("Kód již byl použit " + DateFormat.format("HH:mm:ss dd.MM.yyyy", tickets.getCodes().get(myResult).getUsed()));
                     }
                     builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
                         @Override
@@ -295,7 +297,9 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
         }
     }
 
-    // Kontrola připojení
+    /**
+     * Kontrola připojení.
+     */
     private void checkConnection() {
         final Handler handler = new Handler();
         final Timer timer = new Timer();
@@ -327,6 +331,10 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
         }
     }
 
+    /**
+     * Je k dispozici internet
+     * @return boolean
+     */
     private boolean isInternet(){
         ConnectivityManager cn = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo nf = cn.getActiveNetworkInfo();
@@ -386,7 +394,10 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
                 if(code.getUsed() == null){
                     builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.SuccessDialogTheme);
                     builder.setTitle("Kód přijat");
-                    tickets.getCodes().put(code.getCode(), new Date());
+                    builder.setMessage(code.getLine_first() + "\n" + code.getLine_second());
+                    Code tmp = tickets.getCodes().get(code.getCode());
+                    tmp.setUsed(new Date());
+                    tickets.getCodes().put(code.getCode(), tmp);
                 }else {
                     builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.FailDialogTheme);
                     builder.setTitle("Kód nebyl přijat");

@@ -24,6 +24,7 @@ import com.example.adamfousek.tickitoprojekt.models.ApiClient;
 import com.example.adamfousek.tickitoprojekt.models.Event;
 import com.example.adamfousek.tickitoprojekt.EventAdapter;
 import com.example.adamfousek.tickitoprojekt.R;
+import com.example.adamfousek.tickitoprojekt.models.Tickets;
 import com.example.adamfousek.tickitoprojekt.models.User;
 
 import retrofit2.Call;
