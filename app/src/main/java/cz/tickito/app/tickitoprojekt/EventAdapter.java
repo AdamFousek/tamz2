@@ -1,4 +1,4 @@
-package com.example.adamfousek.tickitoprojekt;
+package cz.tickito.app.tickitoprojekt;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -7,7 +7,9 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
-import com.example.adamfousek.tickitoprojekt.models.Event;
+import cz.tickito.app.tickitoprojekt.R;
+
+import cz.tickito.app.tickitoprojekt.models.Event;
 
 import java.util.List;
 

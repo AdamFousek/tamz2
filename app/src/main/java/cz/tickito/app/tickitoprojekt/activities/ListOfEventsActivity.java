@@ -1,4 +1,4 @@
-package com.example.adamfousek.tickitoprojekt.activities;
+package cz.tickito.app.tickitoprojekt.activities;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -20,12 +20,10 @@ import android.widget.ListView;
 import android.widget.Toast;
 
 
-import com.example.adamfousek.tickitoprojekt.models.ApiClient;
-import com.example.adamfousek.tickitoprojekt.models.Event;
-import com.example.adamfousek.tickitoprojekt.EventAdapter;
-import com.example.adamfousek.tickitoprojekt.R;
-import com.example.adamfousek.tickitoprojekt.models.Tickets;
-import com.example.adamfousek.tickitoprojekt.models.User;
+import cz.tickito.app.tickitoprojekt.models.ApiClient;
+import cz.tickito.app.tickitoprojekt.models.Event;
+import cz.tickito.app.tickitoprojekt.EventAdapter;
+import cz.tickito.app.tickitoprojekt.models.User;
 
 import retrofit2.Call;
 import retrofit2.Response;
@@ -80,15 +78,15 @@ public class ListOfEventsActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_list_of_events);
+        setContentView(cz.tickito.app.tickitoprojekt.R.layout.activity_list_of_events);
 
         // Získání informací o uživateli
         Intent intent = getIntent();
         user = (User)intent.getSerializableExtra("User");
         activeLoE = true;
 
-        adapter = new EventAdapter(ListOfEventsActivity.this,R.layout.list_event_layout, user.getEvents());
-        lv = (ListView)findViewById(R.id.listView1);
+        adapter = new EventAdapter(ListOfEventsActivity.this, cz.tickito.app.tickitoprojekt.R.layout.list_event_layout, user.getEvents());
+        lv = (ListView)findViewById(cz.tickito.app.tickitoprojekt.R.id.listView1);
         lv.setAdapter(adapter);
 
     }
@@ -96,7 +94,7 @@ public class ListOfEventsActivity extends AppCompatActivity {
     // Přídání menu
     @Override
     public boolean onCreateOptionsMenu(Menu menu){
-        getMenuInflater().inflate(R.menu.settings, menu);
+        getMenuInflater().inflate(cz.tickito.app.tickitoprojekt.R.menu.settings, menu);
         return true;
     }
 
@@ -104,7 +102,7 @@ public class ListOfEventsActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item){
         int id = item.getItemId();
 
-        if(id == R.id.logout){
+        if(id == cz.tickito.app.tickitoprojekt.R.id.logout){
             // Při odhlášení smažeme SharedPreferences aby se uživatel znovu nepřihlásil
             mySharedPref = getSharedPreferences("UserInfo", Context.MODE_PRIVATE);
             mySharedEditor = mySharedPref.edit();

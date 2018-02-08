@@ -1,9 +1,7 @@
-package com.example.adamfousek.tickitoprojekt.models;
+package cz.tickito.app.tickitoprojekt.models;
 
 import com.google.gson.annotations.SerializedName;
 
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.Map;
 
 /**

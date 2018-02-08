@@ -1,4 +1,4 @@
-package com.example.adamfousek.tickitoprojekt.activities;
+package cz.tickito.app.tickitoprojekt.activities;
 
 import android.content.Context;
 import android.content.Intent;
@@ -19,10 +19,10 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.adamfousek.tickitoprojekt.AESCrypt;
-import com.example.adamfousek.tickitoprojekt.R;
-import com.example.adamfousek.tickitoprojekt.models.User;
-import com.example.adamfousek.tickitoprojekt.models.ApiClient;
+import cz.tickito.app.tickitoprojekt.AESCrypt;
+import cz.tickito.app.tickitoprojekt.R;
+import cz.tickito.app.tickitoprojekt.models.User;
+import cz.tickito.app.tickitoprojekt.models.ApiClient;
 
 import java.util.Timer;
 import java.util.TimerTask;

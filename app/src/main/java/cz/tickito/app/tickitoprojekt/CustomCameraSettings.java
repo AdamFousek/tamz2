@@ -1,14 +1,12 @@
-package com.example.adamfousek.tickitoprojekt;
+package cz.tickito.app.tickitoprojekt;
 
 import android.content.Context;
 import android.content.res.Configuration;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 
 import me.dm7.barcodescanner.core.DisplayUtils;

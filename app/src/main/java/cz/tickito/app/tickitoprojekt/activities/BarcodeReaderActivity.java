@@ -1,4 +1,4 @@
-package com.example.adamfousek.tickitoprojekt.activities;
+package cz.tickito.app.tickitoprojekt.activities;
 
 import android.content.Context;
 import android.content.DialogInterface;
@@ -15,7 +15,6 @@ import android.os.Bundle;
 import android.text.InputType;
 import android.text.format.DateFormat;
 import android.util.Base64;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.WindowManager;
@@ -24,21 +23,19 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 
-import com.example.adamfousek.tickitoprojekt.AESCrypt;
-import com.example.adamfousek.tickitoprojekt.CustomCameraSettings;
-import com.example.adamfousek.tickitoprojekt.R;
-import com.example.adamfousek.tickitoprojekt.models.ApiClient;
-import com.example.adamfousek.tickitoprojekt.models.Code;
-import com.example.adamfousek.tickitoprojekt.models.Tickets;
-import com.example.adamfousek.tickitoprojekt.models.Event;
-import com.example.adamfousek.tickitoprojekt.models.User;
+import cz.tickito.app.tickitoprojekt.AESCrypt;
+import cz.tickito.app.tickitoprojekt.CustomCameraSettings;
+import cz.tickito.app.tickitoprojekt.models.ApiClient;
+import cz.tickito.app.tickitoprojekt.models.Code;
+import cz.tickito.app.tickitoprojekt.models.Tickets;
+import cz.tickito.app.tickitoprojekt.models.Event;
+import cz.tickito.app.tickitoprojekt.models.User;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.zxing.Result;
 
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -148,14 +145,14 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
                 if (tickets.getCodes().containsKey(myResult)) {
                     AlertDialog.Builder builder;
                     if (tickets.getCodes().get(myResult) == null) {
-                        builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.SuccessDialogTheme);
+                        builder = new AlertDialog.Builder(BarcodeReaderActivity.this, cz.tickito.app.tickitoprojekt.R.style.SuccessDialogTheme);
                         builder.setTitle("Kód přijat");
                         Code tmp = tickets.getCodes().get(myResult);
                         tmp.setUsed(new Date());
                         tickets.getCodes().put(myResult, tmp);
                         usedTickets.add(myResult);
                     } else {
-                        builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.FailDialogTheme);
+                        builder = new AlertDialog.Builder(BarcodeReaderActivity.this, cz.tickito.app.tickitoprojekt.R.style.FailDialogTheme);
                         builder.setTitle("Kód nebyl přijat");
                         builder.setMessage("Kód již byl použit " + DateFormat.format("HH:mm:ss dd.MM.yyyy", tickets.getCodes().get(myResult).getUsed()));
                     }
@@ -172,7 +169,7 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
                     alertCode.show();
                 } else {
                     // Když kód k dané akci neexistuje
-                    AlertDialog.Builder builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.FailDialogTheme);
+                    AlertDialog.Builder builder = new AlertDialog.Builder(BarcodeReaderActivity.this, cz.tickito.app.tickitoprojekt.R.style.FailDialogTheme);
 
                     builder.setTitle("Kód nebyl přijat");
                     builder.setMessage("Kód pro danou akci neexistuje");
@@ -190,7 +187,7 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
                     alertCode.show();
                 }
             } else {
-                AlertDialog.Builder builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.FailDialogTheme);
+                AlertDialog.Builder builder = new AlertDialog.Builder(BarcodeReaderActivity.this, cz.tickito.app.tickitoprojekt.R.style.FailDialogTheme);
 
                 builder.setTitle("Vstupenky nebyly staženy");
                 builder.setMessage("Prosím, obnovte internetové spojení pro stažení lístků!");
@@ -214,26 +211,26 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
     @Override
     public boolean onCreateOptionsMenu(Menu menu){
         // Menu pro rozsvicení světla a zadání kódu ručně
-        getMenuInflater().inflate(R.menu.barcode_menu, menu);
+        getMenuInflater().inflate(cz.tickito.app.tickitoprojekt.R.menu.barcode_menu, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item){
         int id = item.getItemId();
-        if(id == R.id.flashlight){
+        if(id == cz.tickito.app.tickitoprojekt.R.id.flashlight){
             // Rozsvícení světla
             scannerView.stopCameraPreview();
             scannerView.toggleFlash();
             if(scannerView.getFlash()){
-                item.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.flashlight_on, null));
+                item.setIcon(ResourcesCompat.getDrawable(getResources(), cz.tickito.app.tickitoprojekt.R.drawable.flashlight_on, null));
             } else {
-                item.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.flashlight, null));
+                item.setIcon(ResourcesCompat.getDrawable(getResources(), cz.tickito.app.tickitoprojekt.R.drawable.flashlight, null));
             }
             scannerView.resumeCameraPreview(this);
             return true;
         }
-        if(id == R.id.manulaScan){
+        if(id == cz.tickito.app.tickitoprojekt.R.id.manulaScan){
             // Zobrazí se Dialog na zadání kódu ručně
             final EditText input = new EditText(this);
             InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -392,14 +389,14 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
                 // Vypsání kódu a jestli byl použitý nebo ne
                 AlertDialog.Builder builder;
                 if(code.getUsed() == null){
-                    builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.SuccessDialogTheme);
+                    builder = new AlertDialog.Builder(BarcodeReaderActivity.this, cz.tickito.app.tickitoprojekt.R.style.SuccessDialogTheme);
                     builder.setTitle("Kód přijat");
                     builder.setMessage(code.getLine_first() + "\n" + code.getLine_second());
                     Code tmp = tickets.getCodes().get(code.getCode());
                     tmp.setUsed(new Date());
                     tickets.getCodes().put(code.getCode(), tmp);
                 }else {
-                    builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.FailDialogTheme);
+                    builder = new AlertDialog.Builder(BarcodeReaderActivity.this, cz.tickito.app.tickitoprojekt.R.style.FailDialogTheme);
                     builder.setTitle("Kód nebyl přijat");
                     builder.setMessage("Kód již byl použit "+ DateFormat.format("HH:mm:ss dd.MM.yyyy", code.getUsed()));
                 }
@@ -417,7 +414,7 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
 
             }else{
                 // Když kód k dané akci neexistuje
-                AlertDialog.Builder builder = new AlertDialog.Builder(BarcodeReaderActivity.this, R.style.FailDialogTheme);
+                AlertDialog.Builder builder = new AlertDialog.Builder(BarcodeReaderActivity.this, cz.tickito.app.tickitoprojekt.R.style.FailDialogTheme);
 
                 builder.setTitle("Kód nebyl přijat");
                 builder.setMessage("Kód pro danou akci neexistuje");

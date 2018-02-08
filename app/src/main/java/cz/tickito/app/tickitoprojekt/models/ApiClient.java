@@ -1,4 +1,4 @@
-package com.example.adamfousek.tickitoprojekt.models;
+package cz.tickito.app.tickitoprojekt.models;
 
 import retrofit2.Call;
 import retrofit2.http.GET;

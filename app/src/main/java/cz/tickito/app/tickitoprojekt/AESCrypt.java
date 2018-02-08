@@ -1,11 +1,8 @@
-package com.example.adamfousek.tickitoprojekt;
+package cz.tickito.app.tickitoprojekt;
 
-import android.app.ActivityManager;
-import android.content.Context;
 import android.util.Base64;
 
 import java.security.Key;
-import java.util.List;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;

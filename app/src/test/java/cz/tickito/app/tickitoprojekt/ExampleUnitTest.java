@@ -1,4 +1,4 @@
-package com.example.adamfousek.tickitoprojekt;
+package cz.tickito.app.tickitoprojekt;
 
 import org.junit.Test;
 
