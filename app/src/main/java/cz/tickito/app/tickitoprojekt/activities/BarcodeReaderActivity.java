@@ -220,14 +220,18 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
         int id = item.getItemId();
         if(id == cz.tickito.app.tickitoprojekt.R.id.flashlight){
             // Rozsvícení světla
-            scannerView.stopCameraPreview();
-            scannerView.toggleFlash();
-            if(scannerView.getFlash()){
-                item.setIcon(ResourcesCompat.getDrawable(getResources(), cz.tickito.app.tickitoprojekt.R.drawable.flashlight_on, null));
-            } else {
-                item.setIcon(ResourcesCompat.getDrawable(getResources(), cz.tickito.app.tickitoprojekt.R.drawable.flashlight, null));
+            try{
+                scannerView.stopCameraPreview();
+                scannerView.toggleFlash();
+                if(scannerView.getFlash()){
+                    item.setIcon(ResourcesCompat.getDrawable(getResources(), cz.tickito.app.tickitoprojekt.R.drawable.flashlight_on, null));
+                } else {
+                    item.setIcon(ResourcesCompat.getDrawable(getResources(), cz.tickito.app.tickitoprojekt.R.drawable.flashlight, null));
+                }
+                scannerView.resumeCameraPreview(this);
+            }catch(Exception e){
+                Toast.makeText(getApplicationContext(), "Světlo nelze zapnout", Toast.LENGTH_SHORT).show();
             }
-            scannerView.resumeCameraPreview(this);
             return true;
         }
         if(id == cz.tickito.app.tickitoprojekt.R.id.manulaScan){
