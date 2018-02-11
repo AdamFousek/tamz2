@@ -59,6 +59,10 @@ public class EventAdapter extends ArrayAdapter<Event> {
         return row;
     }
 
+    public int getDataSize(){
+        return this.data.size();
+    }
+
     static class EntryHolder
     {
         TextView txtTickets;
