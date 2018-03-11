@@ -20,6 +20,7 @@ import android.widget.ListView;
 import android.widget.Toast;
 
 
+import cz.tickito.app.tickitoprojekt.R;
 import cz.tickito.app.tickitoprojekt.models.ApiClient;
 import cz.tickito.app.tickitoprojekt.models.Event;
 import cz.tickito.app.tickitoprojekt.EventAdapter;
@@ -193,9 +194,11 @@ public class ListOfEventsActivity extends AppCompatActivity {
                 else{
                     adapter.clear();
                     adapter.addAll(user.getEvents());
-                    adapter.notifyDataSetChanged();
                 }
                 adapter.notifyDataSetChanged();
+                findViewById(R.id.noEventsListed).setVisibility(
+                        adapter.getDataSize() == 0 ? View.VISIBLE : View.GONE
+                );
                 lv.setOnItemClickListener(new ListView.OnItemClickListener() {
                     @Override
                     public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
