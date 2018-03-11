@@ -1,6 +1,9 @@
 package cz.tickito.app.tickitoprojekt.activities;
 
 import android.Manifest;
+import android.app.Activity;
+import android.app.Dialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -19,6 +22,7 @@ import android.os.Bundle;
 import android.text.InputType;
 import android.text.format.DateFormat;
 import android.util.Base64;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.WindowManager;
@@ -42,9 +46,11 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 
 import me.dm7.barcodescanner.core.IViewFinder;
 import me.dm7.barcodescanner.zxing.ZXingScannerView;
+import okhttp3.OkHttpClient;
 import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.Retrofit;
@@ -57,7 +63,13 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
     private final Gson gson = new GsonBuilder()
             .setDateFormat("yyyy-MM-dd HH:mm:ss")
             .create();
+    final OkHttpClient okHttpClient = new OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build();
     private final Retrofit.Builder builder = new Retrofit.Builder()
+            .client(okHttpClient)
             .baseUrl("https://www.tickito.cz/")
             .addConverterFactory(GsonConverterFactory.create(gson));
     private final Retrofit retrofit = builder.build();
@@ -245,6 +257,7 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
         }
         if(id == cz.tickito.app.tickitoprojekt.R.id.manulaScan){
             // Zobrazí se Dialog na zadání kódu ručně
+            scannerView.stopCameraPreview();
             final EditText input = new EditText(this);
             InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
             imm.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT);
@@ -266,6 +279,7 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     dialog.cancel();
+                    scannerView.resumeCameraPreview(BarcodeReaderActivity.this);
                 }
             });
 
@@ -359,6 +373,8 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
         private final String name;
         private final String password;
         private final String codeS;
+        private ProgressDialog progDialog;
+        private int responseCode;
 
         CheckCodeTask(String code){
             mySharedPref = getSharedPreferences("UserInfo", Context.MODE_PRIVATE);
@@ -373,6 +389,18 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
             this.codeS=code;
         }
 
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            scannerView.stopCameraPreview();
+            progDialog = new ProgressDialog(BarcodeReaderActivity.this);
+            progDialog.setMessage("Načítání...");
+            progDialog.setIndeterminate(false);
+            progDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+            progDialog.setCancelable(true);
+            progDialog.show();
+        }
+
         // Získání údajů z API
         @Override
         protected Boolean doInBackground(Void... voids) {
@@ -385,6 +413,7 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
 
             try {
                 Response<Code> response = call.execute();
+                responseCode = response.code();
                 if(response.isSuccessful()){
                     code = response.body();
                     return true;
@@ -397,40 +426,81 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
 
         @Override
         protected void onPostExecute(final Boolean success){
-            scannerView.stopCameraPreview();
-            if(success){
-                // Vypsání kódu a jestli byl použitý nebo ne
-                AlertDialog.Builder builder;
-                if(code.getUsed() == null){
-                    builder = new AlertDialog.Builder(BarcodeReaderActivity.this, cz.tickito.app.tickitoprojekt.R.style.SuccessDialogTheme);
-                    builder.setTitle("Kód přijat");
-                    builder.setMessage(code.getLine_first() + "\n" + code.getLine_second());
-                    Code tmp = tickets.getCodes().get(code.getCode());
-                    tmp.setUsed(new Date());
-                    tickets.getCodes().put(code.getCode(), tmp);
-                }else {
-                    builder = new AlertDialog.Builder(BarcodeReaderActivity.this, cz.tickito.app.tickitoprojekt.R.style.FailDialogTheme);
-                    builder.setTitle("Kód nebyl přijat");
-                    builder.setMessage("Kód již byl použit "+ DateFormat.format("HH:mm:ss dd.MM.yyyy", code.getUsed()));
-                }
-                builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        scannerView.resumeCameraPreview(BarcodeReaderActivity.this);
+            progDialog.dismiss();
+            if(success) {
+                if (responseCode == 200) {
+                    // Vypsání kódu a jestli byl použitý nebo ne
+                    AlertDialog.Builder builder;
+                    if (code.getUsed() == null) {
+                        builder = new AlertDialog.Builder(BarcodeReaderActivity.this, cz.tickito.app.tickitoprojekt.R.style.SuccessDialogTheme);
+                        builder.setTitle("Kód přijat");
+                        if(code.getLine_second() != null)
+                            builder.setMessage(code.getLine_first() + "\n" + code.getLine_second());
+                        else
+                            builder.setMessage(code.getLine_first());
+                        Code tmp = tickets.getCodes().get(code.getCode());
+                        tmp.setUsed(new Date());
+                        tickets.getCodes().put(code.getCode(), tmp);
+                    } else {
+                        builder = new AlertDialog.Builder(BarcodeReaderActivity.this, cz.tickito.app.tickitoprojekt.R.style.FailDialogTheme);
+                        builder.setTitle("Kód nebyl přijat");
+                        builder.setMessage("Kód již byl použit " + DateFormat.format("HH:mm:ss dd.MM.yyyy", code.getUsed()));
                     }
-                });
+                    builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            scannerView.resumeCameraPreview(BarcodeReaderActivity.this);
+                        }
+                    });
 
-                AlertDialog alertCode = builder.create();
-                alertCode.setCancelable(false);
-                alertCode.setCanceledOnTouchOutside(false);
-                alertCode.show();
+                    AlertDialog alertCode = builder.create();
+                    alertCode.setCancelable(false);
+                    alertCode.setCanceledOnTouchOutside(false);
+                    alertCode.show();
 
-            }else{
-                // Když kód k dané akci neexistuje
+                } else if (responseCode == 404) {
+                    // Když kód k dané akci neexistuje
+                    AlertDialog.Builder builder = new AlertDialog.Builder(BarcodeReaderActivity.this, cz.tickito.app.tickitoprojekt.R.style.FailDialogTheme);
+
+                    builder.setTitle("Kód nebyl přijat");
+                    builder.setMessage("Kód pro danou akci neexistuje");
+
+                    builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            scannerView.resumeCameraPreview(BarcodeReaderActivity.this);
+                        }
+                    });
+
+                    AlertDialog alertCode = builder.create();
+                    alertCode.setCancelable(false);
+                    alertCode.setCanceledOnTouchOutside(false);
+                    alertCode.show();
+                } else if (responseCode == 500) {
+                    // Když aplikace hodí 500 na webu
+                    AlertDialog.Builder builder = new AlertDialog.Builder(BarcodeReaderActivity.this, cz.tickito.app.tickitoprojekt.R.style.FailDialogTheme);
+
+                    builder.setTitle("Problém na straně serveru");
+                    builder.setMessage("Momentálně nefunguje ověření kódů");
+
+                    builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            scannerView.resumeCameraPreview(BarcodeReaderActivity.this);
+                        }
+                    });
+
+                    AlertDialog alertCode = builder.create();
+                    alertCode.setCancelable(false);
+                    alertCode.setCanceledOnTouchOutside(false);
+                    alertCode.show();
+                }
+            } else {
+                // Když se něco dojebe v apce - timeout nebo tak
                 AlertDialog.Builder builder = new AlertDialog.Builder(BarcodeReaderActivity.this, cz.tickito.app.tickitoprojekt.R.style.FailDialogTheme);
 
-                builder.setTitle("Kód nebyl přijat");
-                builder.setMessage("Kód pro danou akci neexistuje");
+                builder.setTitle("Timeout - ověření selhalo");
+                builder.setMessage("Načítání kódu se nezdařilo, prosím načtěte znova");
 
                 builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     @Override
@@ -444,7 +514,6 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
                 alertCode.setCanceledOnTouchOutside(false);
                 alertCode.show();
             }
-
         }
 
         @Override
