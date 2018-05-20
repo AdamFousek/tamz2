@@ -164,18 +164,27 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
         } else {
             if(tickets != null) {
                 if (tickets.getCodes().containsKey(myResult)) {
+                    Code code = tickets.getCodes().get(myResult);
                     AlertDialog.Builder builder;
-                    if (tickets.getCodes().get(myResult) == null) {
+                    if (code.getUsed() == null) {
                         builder = new AlertDialog.Builder(BarcodeReaderActivity.this, cz.tickito.app.tickitoprojekt.R.style.SuccessDialogTheme);
                         builder.setTitle("Kód přijat");
-                        Code tmp = tickets.getCodes().get(myResult);
-                        tmp.setUsed(new Date());
-                        tickets.getCodes().put(myResult, tmp);
+
+                        if(code.getLine_second() != null)
+                            builder.setMessage(code.getLine_first() + "\n" + code.getLine_second());
+                        else
+                            builder.setMessage(code.getLine_first());
+
+                        code.setUsed(new Date());
+                        tickets.getCodes().put(myResult, code);
                         usedTickets.add(myResult);
                     } else {
                         builder = new AlertDialog.Builder(BarcodeReaderActivity.this, cz.tickito.app.tickitoprojekt.R.style.FailDialogTheme);
                         builder.setTitle("Kód nebyl přijat");
-                        builder.setMessage("Kód již byl použit " + DateFormat.format("HH:mm:ss dd.MM.yyyy", tickets.getCodes().get(myResult).getUsed()));
+                        String message = code.getLine_first();
+                        if(code.getLine_second() != null)
+                            message += "\n" + code.getLine_second();
+                        builder.setMessage(message+"\n\nKód již byl použit " + DateFormat.format("HH:mm:ss dd.MM.yyyy", code.getUsed()));
                     }
                     builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
                         @Override
@@ -443,7 +452,10 @@ public class BarcodeReaderActivity extends AppCompatActivity implements ZXingSca
                 } else {
                     builder = new AlertDialog.Builder(BarcodeReaderActivity.this, cz.tickito.app.tickitoprojekt.R.style.FailDialogTheme);
                     builder.setTitle("Kód nebyl přijat");
-                    builder.setMessage("Kód již byl použit " + DateFormat.format("HH:mm:ss dd.MM.yyyy", code.getUsed()));
+                    String message = code.getLine_first();
+                    if(code.getLine_second() != null)
+                        message += "\n" + code.getLine_second();
+                    builder.setMessage(message+"\n\nKód již byl použit " + DateFormat.format("HH:mm:ss dd.MM.yyyy", code.getUsed()));
                 }
                 builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     @Override
